@@ -1,0 +1,86 @@
+name: 'Set git user properties'
+description: 'Set git user.name and user.email properties by searching the git history for the input name.'
+inputs:
+  userid:
+    description: 'Name or user id of the user running the workflow'
+    required: true
+  alt_name:
+    description: 'Alternative default value for name, if no userid is available or no name can be determined for it.'
+    required: false
+  alt_email:
+    description: 'Alternative default value for email, if no userid is available or no email can be determined for it.'
+    required: false
+  set_git_config:
+    description: "If set to 'global' or 'local', set the determined values in the respective git configuration."
+    required: false
+outputs:
+  name:
+    description: "Value used as git user name"
+    value: ${{ steps.get-values.outputs.name }}
+  email:
+    description: "Value used as git user email"
+    value: ${{ steps.get-values.outputs.email }}
+runs:
+  using: "composite"
+  steps:
+    - id: get-values
+      shell: bash
+      run: |
+      # If present, use the user that triggered the release perform workflow with an action
+      userid="${{ github.event.sender.url }}"
+      if [ -n "${{ inputs.userid }}" ] ; then
+        userid="${{ inputs.userid }}"
+      fi
+
+      if [ -n "${userid}" ] ; then
+        # Try to get the user's name from the profile
+        gh_user_name=$(curl -s ${userid} | jq -r .name)
+        if [ -n "${gh_user_name}" ] ; then
+          echo "Checking commits for author name ${gh_user_name}"
+          commit=$(git rev-list --all -i --max-count=1 --author="${gh_user_name}")
+
+          if [ -z "${commit}" ] ; then
+            echo "Checking commits for committer name name ${gh_user_name}"
+            commit=$(git rev-list --all -i --max-count=1 --committer="${gh_user_name}")
+          fi
+        fi
+
+        if [ -z "${commit}" ] ; then
+          echo "Checking commits for author id ${userid}"
+          commit=$(git rev-list --all -i --max-count=1 --author="${userid}")
+        fi
+        if [ -z "${commit}" ] ; then
+          echo "Checking commits for committer id ${userid}"
+          commit=$(git rev-list --all -i --max-count=1 --committer="${userid}")
+        fi
+
+        if [ -n "${commit}" ] ; then
+          git show --no-patch ${commit}
+          user_name="$(git show --no-patch --pretty=format:"%an" ${commit})"
+          user_email="$(git show --no-patch --pretty=format:"%ae" ${commit})"
+        else
+          # Use the user name, but my email
+          echo "No commit found. Using ${userid} and fixed email."
+          user_name="${userid}"
+          user_email="${{ inputs.alt_email }}"
+        fi
+
+      else
+        # Use alternative user name and my email
+        echo "Nothing available, using fixed name and email."
+        user_name="${{ inputs.alt_name }}"
+        user_email="${{ inputs.alt_email }}"
+      fi
+
+      echo "::set-output name=name::${user_name}"
+      echo "::set-output name=email::${user_email}"
+
+    - id: set-git-props
+      shell: bash
+      run: |
+        if [ "${{ inputs.set_git_config }}" == "global" -o "${{ inputs.set_git_config }}" == "global" ] ; then
+          set -x
+          git config --${{ inputs.set_git_config }} user.name "${{ steps.get-values.outputs.name }}"
+          git config --${{ inputs.set_git_config }} user.email "${{ steps.get-values.outputs.email }}"
+        fi
+
