@@ -13,6 +13,9 @@ inputs:
   set_git_config:
     description: "If set to 'global' or 'local', set the determined values in the respective git configuration."
     required: false
+  path:
+    description: 'Working directory to execute the action in. This must be a git working tree or repository.'
+    required: false
 outputs:
   name:
     description: "Value used as git user name"
@@ -25,6 +28,7 @@ runs:
   steps:
     - id: get-values
       shell: bash
+      working-directory: ${{ inputs.path }}
       run: |
       # If present, use the user that triggered the release perform workflow with an action
       userid="${{ github.event.sender.url }}"
@@ -77,6 +81,7 @@ runs:
 
     - id: set-git-props
       shell: bash
+      working-directory: ${{ inputs.path }}
       run: |
         if [ "${{ inputs.set_git_config }}" == "global" -o "${{ inputs.set_git_config }}" == "global" ] ; then
           set -x
