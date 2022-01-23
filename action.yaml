@@ -31,14 +31,16 @@ runs:
       working-directory: ${{ inputs.path }}
       run: |
         # If present, use the user that triggered the release perform workflow with an action
-        userid="${{ github.event.sender.url }}"
+        userid="${{ github.event.sender.login }}"
+        userurl="${{ github.event.sender.url }}"
         if [ -n "${{ inputs.userid }}" ] ; then
           userid="${{ inputs.userid }}"
+          userurl=${GITHUB_API_URL}/users/${{ inputs.userid }}
         fi
 
         if [ -n "${userid}" ] ; then
           # Try to get the user's name from the profile
-          gh_user_name=$(curl -s ${userid} | jq -r .name)
+          gh_user_name=$(curl -s ${userurl} | jq -r .name)
           if [ -n "${gh_user_name}" ] ; then
             echo "Checking commits for author name ${gh_user_name}"
             commit=$(git rev-list --all -i --max-count=1 --author="${gh_user_name}")
