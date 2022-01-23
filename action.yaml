@@ -85,7 +85,7 @@ runs:
       shell: bash
       working-directory: ${{ inputs.path }}
       run: |
-        if [ "${{ inputs.set_git_config }}" == "global" -o "${{ inputs.set_git_config }}" == "global" ] ; then
+        if [ "${{ inputs.set_git_config }}" == "global" -o "${{ inputs.set_git_config }}" == "local" ] ; then
           set -x
           git config --${{ inputs.set_git_config }} user.name "${{ steps.get-values.outputs.name }}"
           git config --${{ inputs.set_git_config }} user.email "${{ steps.get-values.outputs.email }}"
