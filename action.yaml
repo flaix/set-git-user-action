@@ -78,8 +78,8 @@ runs:
           user_email="${{ inputs.alt_email }}"
         fi
 
-        echo "::set-output name=name::${user_name}"
-        echo "::set-output name=email::${user_email}"
+        echo "name=${user_name}" >> $GITHUB_OUTPUT
+        echo "email=${user_email}" >> $GITHUB_OUTPUT
 
     - id: set-git-props
       shell: bash
